@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>XO Game</title>
+  <link rel="stylesheet" href="../style/style.css"/>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-user">
+      <img id="userAvatar" src="" alt="" class="avatar" style="display:none"/>
+      <span id="userName">Loading...</span>
+    </div>
+    <div class="topbar-actions">
+      <a href="leaderboard.html" class="topbar-link">🏆 Leaderboard</a>
+      <button class="topbar-btn" onclick="handleLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="xo-wrap">
+    <div class="xo-score">
+      <div class="xo-score-card x-card">
+        <div class="xo-score-label">X</div>
+        <div class="xo-score-val" id="score-x">0</div>
+      </div>
+      <div class="xo-score-card">
+        <div class="xo-score-label">Draw</div>
+        <div class="xo-score-val" id="score-d">0</div>
+      </div>
+      <div class="xo-score-card o-card">
+        <div class="xo-score-label">O</div>
+        <div class="xo-score-val" id="score-o">0</div>
+      </div>
+    </div>
+
+    <div class="xo-mode">
+      <span>Mode:</span>
+      <button class="mode-btn active" id="btn-pvp" onclick="setMode('pvp')">2 Players</button>
+      <button class="mode-btn" id="btn-ai" onclick="setMode('ai')">vs CPU</button>
+    </div>
+
+    <div class="xo-status" id="status">X's turn</div>
+
+    <div class="board" id="board">
+      <button class="cell" onclick="play(0)" id="c0"></button>
+      <button class="cell" onclick="play(1)" id="c1"></button>
+      <button class="cell" onclick="play(2)" id="c2"></button>
+      <button class="cell" onclick="play(3)" id="c3"></button>
+      <button class="cell" onclick="play(4)" id="c4"></button>
+      <button class="cell" onclick="play(5)" id="c5"></button>
+      <button class="cell" onclick="play(6)" id="c6"></button>
+      <button class="cell" onclick="play(7)" id="c7"></button>
+      <button class="cell" onclick="play(8)" id="c8"></button>
+    </div>
+
+    <button class="xo-btn" onclick="reset()">New game</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // ===== PASTE YOUR FIREBASE CONFIG HERE =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyBF24vqqLjs7wMFkosr9wsEOp3tRN4LV2w",
+      authDomain: "xogame-81988.firebaseapp.com",
+      projectId: "xogame-81988",
+      storageBucket: "xogame-81988.firebasestorage.app",
+      messagingSenderId: "358766537172",
+      appId: "1:358766537172:web:3b5dcf67736cc2ec774e41",
+      measurementId: "G-VRV24V8W2M"
+    };
+    // ===========================================
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) { window.location.href = "login.html"; return; }
+
+      document.getElementById("userName").textContent = user.displayName || user.email;
+      if (user.photoURL) {
+        const av = document.getElementById("userAvatar");
+        av.src = user.photoURL;
+        av.style.display = "inline-block";
+      }
+
+      // Create user doc if first time
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          displayName: user.displayName || user.email,
+          photoURL: user.photoURL || "",
+          wins: 0, losses: 0, draws: 0,
+          createdAt: serverTimestamp()
+        });
+      }
+    });
+
+    window.saveResult = async (result) => {
+      const user = auth.currentUser;
+      if (!user) return;
+      const ref = doc(db, "users", user.uid);
+      const field = result === "win" ? "wins" : result === "loss" ? "losses" : "draws";
+      await updateDoc(ref, {
+        [field]: increment(1),
+        lastPlayed: serverTimestamp()
+      });
+    };
+
+    window.handleLogout = async () => {
+      await signOut(auth);
+      window.location.href = "login.html";
+    };
+  </script>
+
+  <script src="../script/game.js"></script>
+</body>
+</html>

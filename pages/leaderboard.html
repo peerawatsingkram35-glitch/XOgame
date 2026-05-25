@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>XO Game — Leaderboard</title>
+  <link rel="stylesheet" href="../style/style.css"/>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-user">
+      <span id="userName">Loading...</span>
+    </div>
+    <div class="topbar-actions">
+      <a href="index.html" class="topbar-link">🎮 Play</a>
+      <button class="topbar-btn" onclick="handleLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="lb-wrap">
+    <h1 class="lb-title">🏆 Leaderboard</h1>
+
+    <div class="lb-table-wrap">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Draws</th>
+            <th>Win %</th>
+          </tr>
+        </thead>
+        <tbody id="lb-body">
+          <tr><td colspan="6" class="lb-loading">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Current user stats card -->
+    <div class="my-stats" id="myStats" style="display:none">
+      <h2 class="my-stats-title">Your Stats</h2>
+      <div class="my-stats-grid">
+        <div class="stat-box"><div class="stat-val" id="myWins">0</div><div class="stat-lbl">Wins</div></div>
+        <div class="stat-box"><div class="stat-val" id="myDraws">0</div><div class="stat-lbl">Draws</div></div>
+        <div class="stat-box"><div class="stat-val" id="myLosses">0</div><div class="stat-lbl">Losses</div></div>
+        <div class="stat-box"><div class="stat-val" id="myWinRate">0%</div><div class="stat-lbl">Win rate</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, query, orderBy, limit, getDocs, doc, getDoc }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // ===== PASTE YOUR FIREBASE CONFIG HERE =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyBF24vqqLjs7wMFkosr9wsEOp3tRN4LV2w",
+      authDomain: "xogame-81988.firebaseapp.com",
+      projectId: "xogame-81988",
+      storageBucket: "xogame-81988.firebasestorage.app",
+      messagingSenderId: "358766537172",
+      appId: "1:358766537172:web:3b5dcf67736cc2ec774e41",
+      measurementId: "G-VRV24V8W2M"
+    };
+    // ===========================================
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) { window.location.href = "login.html"; return; }
+      document.getElementById("userName").textContent = user.isAnonymous ? "Guest" : (user.displayName || user.email);
+
+      await loadLeaderboard(user.uid);
+      if (!user.isAnonymous) await loadMyStats(user.uid);
+    });
+
+    async function loadLeaderboard(myUid) {
+      const q = query(collection(db, "users"), orderBy("wins", "desc"), limit(20));
+      const snap = await getDocs(q);
+      const tbody = document.getElementById("lb-body");
+      tbody.innerHTML = "";
+
+      if (snap.empty) {
+        tbody.innerHTML = '<tr><td colspan="6" class="lb-loading">No data yet. Play some games!</td></tr>';
+        return;
+      }
+
+      snap.forEach((d, i) => {
+        const data = d.data();
+        const total = (data.wins || 0) + (data.losses || 0) + (data.draws || 0);
+        const winRate = total > 0 ? Math.round((data.wins / total) * 100) : 0;
+        const isMe = d.id === myUid;
+        const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1;
+
+        tbody.innerHTML += `
+          <tr class="${isMe ? "lb-me" : ""}">
+            <td>${medal}</td>
+            <td class="lb-name">
+              ${data.photoURL ? `<img src="${data.photoURL}" class="lb-avatar" alt=""/>` : ""}
+              ${data.displayName || "Unknown"}
+              ${isMe ? '<span class="badge-you">You</span>' : ""}
+            </td>
+            <td class="win-col">${data.wins || 0}</td>
+            <td>${data.losses || 0}</td>
+            <td>${data.draws || 0}</td>
+            <td>${winRate}%</td>
+          </tr>`;
+      });
+    }
+
+    async function loadMyStats(uid) {
+      const snap = await getDoc(doc(db, "users", uid));
+      if (!snap.exists()) return;
+      const d = snap.data();
+      const total = (d.wins || 0) + (d.losses || 0) + (d.draws || 0);
+      document.getElementById("myWins").textContent    = d.wins    || 0;
+      document.getElementById("myDraws").textContent   = d.draws   || 0;
+      document.getElementById("myLosses").textContent  = d.losses  || 0;
+      document.getElementById("myWinRate").textContent = total > 0 ? Math.round((d.wins / total) * 100) + "%" : "0%";
+      document.getElementById("myStats").style.display = "block";
+    }
+
+    window.handleLogout = async () => {
+      await signOut(auth);
+      window.location.href = "login.html";
+    };
+  </script>
+</body>
+</html>

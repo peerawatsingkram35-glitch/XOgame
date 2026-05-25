@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>XO Game — Login</title>
+  <link rel="stylesheet" href="../style/style.css"/>
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+    <div class="auth-logo">✕ ○</div>
+    <h1 class="auth-title">XO Game</h1>
+    <p class="auth-sub">Sign in to save your score and climb the leaderboard</p>
+
+    <div class="auth-buttons">
+      <button class="auth-btn google" onclick="loginGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt=""/>
+        Continue with Google
+      </button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    // ===== PASTE YOUR FIREBASE CONFIG HERE =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyBF24vqqLjs7wMFkosr9wsEOp3tRN4LV2w",
+      authDomain: "xogame-81988.firebaseapp.com",
+      projectId: "xogame-81988",
+      storageBucket: "xogame-81988.firebasestorage.app",
+      messagingSenderId: "358766537172",
+      appId: "1:358766537172:web:3b5dcf67736cc2ec774e41",
+      measurementId: "G-VRV24V8W2M"
+    };
+    // ===========================================
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, user => {
+      if (user) window.location.href = "index.html";
+    });
+
+    window.loginGoogle = async () => {
+      try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+  </script>
+</body>
+</html>
